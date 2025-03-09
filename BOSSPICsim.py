@@ -8,11 +8,11 @@ import serial.tools.list_ports
 import sys
 
 
-# use for whether BOSS PIC allows SMF using request from MIS MCU
+# use for whether BOSS PIC allows SMF using request from MIS MCU. Input 0.0 ~ 1.0
 permission_probability = 0.7
 
-# Normally, command entered from  MIS MCU, debug mode will be possible to input manually from CLI.
-debug_mode = False
+# Normally, command entered from  MIS MCU, debug mode will be possible to input manually from CLI. Input True or Flase
+debug_mode = False 
 
  
 # for print message decoration
@@ -168,12 +168,16 @@ class Communication:
             for i, port in enumerate(ports):
                 print(f'{i:X}) {port.device}  ', end='\t')
             print()
-            choice_str = input('> ')
-            if re.fullmatch(f'^[0-{len(ports)-1}]{{1}}$', choice_str):
-                choice = int(choice_str)
-                self.ser: serial.Serial = serial.Serial(ports[choice].device, baudrate=9600, timeout=1)
-                print(f'Connected to: {self.ser.port}')
-                return
+            while True:
+                choice_str = input('> ')
+                if re.fullmatch(f'^[0-{len(ports)-1}]{{1}}$', choice_str):
+                    choice = int(choice_str)
+                    try:
+                        self.ser: serial.Serial = serial.Serial(ports[choice].device, baudrate=9600, timeout=1)
+                    except serial.SerialException as e:
+                        print(e)
+                        continue
+                    return
 
     def select_device_id(self):
         while True:
