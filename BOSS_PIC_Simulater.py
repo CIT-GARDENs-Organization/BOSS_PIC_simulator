@@ -2,19 +2,15 @@ import dataclasses
 import time
 import random
 import re
-from datetime import datetime
 import serial
 import serial.tools.list_ports
 import sys
+import json
 
 
-# use for whether BOSS PIC allows SMF using request from MIS MCU. Input 0.0 ~ 1.0
-permission_probability = 0.7
+with open('.\setting.json') as json_file:
+    setting = json.load(json_file)["BOSS_PIC_simulator"]
 
-# Normally, command entered from  MIS MCU, debug mode will be possible to input manually from CLI. Input True or Flase
-debug_mode = False 
-
- 
 # for print message decoration
 class Print:
     RED     = '\033[31m'
@@ -192,12 +188,12 @@ class Communication:
                 return
 
     def transmit_and_receive_command(self, command: bytes) -> bytes | None:
-        retransmission_time = 2
+        retransmission_time = setting["retransmit_time"]
         for _ in range(retransmission_time + 1):
             print(f'\n{Print.EVENT} BOSS PIC transmit command')
             print(f'\t\t{Print.BOLD}BOSS > > > [{Print.space_every_two_str(command)}] > > > MIS MCU{Print.RESET}\n')
             self.ser.write(command)
-            if not debug_mode:
+            if not setting["debug_mode"]:
                 response = self.receive()
             else:
                 response = Command.manual_input_bytes() # for debug
@@ -213,7 +209,7 @@ class Communication:
     
     def receive(self) -> bytes | None:    # TODO: write more smater code.
         response = b''
-        timeout = 5.0
+        timeout = setting["timeout"]
         start_time = time.time()
         while time.time() - start_time < timeout:
             if self.ser.in_waiting > 0:
@@ -228,7 +224,7 @@ class Communication:
         return None
 
     def respond_to_req(self) -> None:
-        if random.random() > permission_probability:
+        if random.random() < setting["permission_probability"]:
             print(f"\t  -> BOSS PIC allow copying data to SMF")
             allow_command = Command.make_command(self.device_id, Command.IS_SMF_AVAILABLE, Command.ALLOW)
             response = self.transmit_and_receive_command(allow_command)

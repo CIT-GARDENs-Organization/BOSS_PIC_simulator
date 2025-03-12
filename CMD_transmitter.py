@@ -4,6 +4,10 @@ import re
 import serial
 import serial.tools.list_ports
 import sys
+import json
+
+with open(".\setting.json") as json_file:
+    setting = json.load(json_file)["CMD_transmitter"]
 
  
 # for print message decoration
@@ -60,13 +64,14 @@ class Command:
     # UL_CMD = b'\x00'
     # ACK = b'\x0F'
 
+
+    is_add_SFD = setting["is_add_SFD"]
+    is_add_CRC = setting["is_add_CRC"]
+
     Devices = {0x00: 'GS', 0x01: 'MAIN PIC', 0x02: 'COM PIC', 0x03: 'RESET PIC', 0x04: 'FAB PIC', 0x05: 'BOSS PIC', 
                        0x06: 'APRS PIC', 0x07: 'CAM MCU', 0x08: 'CHO MCU', 
                        0x09: 'SATO PIC', 0x0A: 'NAKA PIC', 0x0B: 'BHU MCU'}
     Frame_Id = {0x00: 'Uplink Command', 0x01: 'Status Check', 0x02: 'is SMF available'}
-
-    SFD_use = True
-    CRC_use = True
 
     def __init__(self):
         self.device_id = None
@@ -86,84 +91,6 @@ class Command:
                 print(f'Use device: {Print.BOLD}{Command.Devices[int(choice, 16)]}{Print.RESET}')
                 return
 
-    @staticmethod
-    def sfd_setting():
-        print(f'0) addition SFD')
-        print(f'1) Not addition SFD')
-        while True:
-            sfd = input('> ')
-            if sfd == '0':
-                Command.SFD_use = True
-                break
-            elif sfd == '1':
-                Command.SFD_use = False
-                break
-
-    @staticmethod
-    def crc_setting():
-        print(f'0) addition CRC')
-        print(f'1) Not addition CRC')
-        while True:
-            crc = input('> ')
-            if crc == '0':
-                Command.CRC_use = True
-                break
-            elif crc == '1':
-                Command.CRC_use = False
-                break
-
-    @staticmethod
-    def retransmit_setting():
-        print('Input retransmit time (integer)')
-        while True:
-            ret = input('> ')
-            try:
-                Communication.retransmit_time = int(ret)
-                break
-            except ValueError:
-                pass    
-
-    @staticmethod
-    def timeout_setting():
-        print('Input timeout (float)')
-        while True:
-            timeout = input('> ')
-            try:
-                Communication.timeout = float(timeout)
-                break_flag = True
-                break
-            except ValueError:
-                pass
-
-    @staticmethod
-    def setting():
-        while True:
-            print(f"\n{Print.LINE}")
-            print("Current settings")
-            print(f"0) SFD(0xAA)\t: {Command.SFD_use}")
-            print(f"1) CRC\t\t: {Command.CRC_use}")
-            print(f"2) retransmit time\t: {Communication.retransmit_time}")
-            print(f"3) timeout\t: {Communication.timeout}")
-            print(f"{Print.LINE}")
-            print(f"9) exit setting")
-            while True:
-                choice = input('> ')
-                if re.fullmatch('^[0-39]$', choice):
-                    if choice == '0':
-                        Command.sfd_setting()
-                        break
-                    elif choice == '1':
-                        Command.crc_setting()
-                        break
-                    elif choice == '2':
-                        Command.retransmit_setting()
-                        break
-                    elif choice == '3':
-                        Command.timeout_setting()
-                        break
-                    elif choice == '9':
-                        return
-
     def input_payload(self, com: serial.Serial) -> bytes:
         print('  __ __ __ __ __ __ __ __ __')
         while True:
@@ -171,10 +98,6 @@ class Command:
             if re.fullmatch("^[0-9A-F]+$", input_str):
                 if len(input_str) % 2 == 0:
                     return bytes.fromhex(input_str)
-            elif re.fullmatch("^SETTING$", input_str):
-                self.setting()
-                print(f"\nEnter any bytes in hex")
-                print('  __ __ __ __ __ __ __ __ __')
             elif re.fullmatch("^EXIT$", input_str):
                 close_and_exit(com)
 
@@ -182,7 +105,7 @@ class Command:
         # header = ((self.device_id[0] << 4) | self.frame_id[0]).to_bytes(1, 'big')
         # crc = Command.calc_crc(header + payload)
         # return Command.SFD + header + payload + crc
-        return (Command.SFD if Command.SFD_use else b'') + payload + (Command.calc_crc(payload) if Command.CRC_use else b'')
+        return (Command.SFD if Command.is_add_SFD else b'') + payload + (Command.calc_crc(payload) if Command.is_add_CRC else b'')
 
             
     @staticmethod
@@ -224,9 +147,8 @@ class Command:
 
 # role of communications in general
 class Communication:
-
-    retransmit_time = 2
-    timeout = 3.0
+    retransmit_time = setting["retransmit_time"]
+    timeout = setting["timeout"]
 
     def __init__(self):
         self.ser = None
@@ -259,7 +181,7 @@ class Communication:
         start_time = time.time()
         while time.time() - start_time < Communication.timeout:
             if self.ser.in_waiting > 0:
-                    time.sleep(1.0) # wait for full data receive
+                    time.sleep(1.0) # wait for full data receive # TODO: coding more smart
                     response = self.ser.read_all()
                     return response
             time.sleep(0.1) # rest for cpu
@@ -277,7 +199,7 @@ def close_and_exit(com) -> None:
 
 def main():
     print(f'\n=============================')
-    print(f'=== {Print.BOLD}Frame Simulator v1.00{Print.RESET} ===')
+    print(f'=== {Print.BOLD}CMD Transmitter v1.00{Print.RESET} ===')
     print(f'=============================\n')
 
     com = Communication()
@@ -285,8 +207,9 @@ def main():
     cmd = Command()
     # cmd.select_device()
 
+    print(f"\n{Print.LINE}\n")
     print(f"Enter any bytes in hex {Print.BOLD}(device ID, frame ID, payload){Print.RESET}")
-    print(f"* Enter 'setting' to go to Setting mode\n* Enter 'exit' to exit this software")
+    print(f"* Enter 'exit' to exit this software")
     while True:
         send_payload = cmd.input_payload(com)
         send_frame = cmd.make_frame(send_payload)
