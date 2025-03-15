@@ -6,8 +6,18 @@ import serial.tools.list_ports
 import sys
 import json
 
-with open(".\setting.json") as json_file:
-    setting = json.load(json_file)["CMD_transmitter"]
+try:
+    with open(".\\setting.json") as json_file:
+        setting = json.load(json_file)["CMD_transmitter"]
+except FileNotFoundError as e:
+    print(e)
+    print("Apply default settings")
+    setting = {
+        "retransmit_time": 0, 
+        "timeout": 2.0, 
+        "is_add_SFD": False, 
+        "is_add_CRC": False 
+    }
 
  
 # for print message decoration
