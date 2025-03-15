@@ -4,20 +4,13 @@ import re
 import serial
 import serial.tools.list_ports
 import sys
-import json
 
-try:
-    with open(".\\setting.json") as json_file:
-        setting = json.load(json_file)["CMD_transmitter"]
-except FileNotFoundError as e:
-    print(e)
-    print("Apply default settings")
-    setting = {
-        "retransmit_time": 0, 
-        "timeout": 2.0, 
-        "is_add_SFD": False, 
-        "is_add_CRC": False 
-    }
+setting = {
+    "retransmit_time": 0,       # Retransmit limit
+    "timeout": 2.0,             # The time until retransmit
+    "is_add_SFD": False,        # Automatically prepends SFD (0xAA) to send commands
+    "is_add_CRC": False         # Automatically prepends SFD (0xAA) to send commands
+}
 
  
 # for print message decoration
