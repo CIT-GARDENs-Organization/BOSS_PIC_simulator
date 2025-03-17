@@ -5,11 +5,14 @@ import re
 import serial
 import serial.tools.list_ports
 import sys
-import json
 
-
-with open('.\setting.json') as json_file:
-    setting = json.load(json_file)["BOSS_PIC_simulator"]
+setting = {
+    "retransmit_time": 2,           # Retransmit limit
+    "timeout": 3.0,                 # The time until retransmit
+    "permission_probability": 0.9,  # Permit rate for SMF copy REQ from MIS MCU 
+    "wait_time": 10,                # The time of BOSS PIC comunicating with other MIS MCU
+    "debug_mode": False             # If set True, you will always be able to type command in CLI
+}
 
 # for print message decoration
 class Print:
@@ -61,10 +64,10 @@ class Command:
     MIS_MCU_STATUS = b'\x01'
 
     # MIS_MCU_STATUS payload
-    EXECTING_MISSION = b'\x00'
-    REQ_COPY_TO_SMF = b'\x01'
-    COPYING_TO_SMF = b'\x02'
-    FINISHED_MISSION = b'\x03'
+    BUSY = b'\x03'
+    REQ_COPY_TO_SMF = b'\x04'
+    COPYING_TO_SMF = b'\x05'
+    FINISHED_MISSION = b'\x06'
 
     # flame id (common)
     UL_CMD = b'\x00'
@@ -281,12 +284,6 @@ def main():
 
     print(f"{Print.INFO} BOSS PIC received uplink command")
     time.sleep(1)
-    print(f"{Print.INFO} BOSS PIC switch CPLD rooting")
-    time.sleep(1)
-    print(f"{Print.INFO} BOSS PIC turn ON power of MIS MCU")
-    time.sleep(1)
-    print(f"{Print.INFO} BOSS PIC wait for MIS MCU turn on and initialize procedure", end="")
-    time.sleep(1)
 
     response = com.transmit_and_receive_command(uplink_command)
     
@@ -303,7 +300,7 @@ def main():
             if not frame_data.frame_id:
                 quit_software(com, 2)
 
-            if frame_data.payload == Command.EXECTING_MISSION:
+            if frame_data.payload == Command.BUSY:
                 print(f"\t-> Executing mission")
 
             elif frame_data.payload == Command.REQ_COPY_TO_SMF:
@@ -323,7 +320,7 @@ def main():
         time.sleep(1)
         print(f"{Print.INFO} BOSS PIC switch CPLD rooting")
         print(f'\t-> Communicating other MIS MCU', end='')
-        Print.wait(20)
+        Print.wait(setting["wait_time"])
         print(f"{Print.INFO} BOSS PIC switch CPLD rooting")
         print(f'\t-> Connection is to you')
         time.sleep(1)
