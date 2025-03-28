@@ -145,8 +145,8 @@ class Command:
     
 # role of communications in general
 class Communication:
-    MIS_MCU_DEVICES = {0x06: 'APRS PIC', 0x07: 'CAM MCU', 0x08: 'CHO MCU', 
-                       0x09: 'SATO PIC', 0x0A: 'NAKA PIC', 0x0B: 'BHU MCU'}
+    MIS_MCU_DEVICES = {0x05: 'APRS PIC', 0x06: 'CAM MCU', 0x07: 'CHO MCU', 
+                       0x08: 'SATO PIC', 0x09: 'NAKA PIC', 0x0A: 'BHU MCU', 0x0B: 'CIGS PIC'}
 
     def __init__(self):
         self.ser = None
