@@ -50,7 +50,7 @@ class Command:
     SFD = b'\xAA'
 
     # device_id
-    BOSS_PIC_DEVICE_ID = b'\x04'
+    BOSS_PIC_DEVICE_ID = b'\x05'
 
     # flame id (mis mcu receive)
     STATUS_CHECK = b'\x01'
@@ -61,7 +61,7 @@ class Command:
     DENY = b'\x01'
 
     # flame id (boss pic receive)
-    MIS_MCU_STATUS = b'\x01'
+    MIS_MCU_STATUS = b'\x03'
 
     # MIS_MCU_STATUS payload
     BUSY = b'\x03'
@@ -145,8 +145,8 @@ class Command:
     
 # role of communications in general
 class Communication:
-    MIS_MCU_DEVICES = {0x05: 'APRS PIC', 0x06: 'CAM MCU', 0x07: 'CHO MCU', 
-                       0x08: 'SATO PIC', 0x09: 'NAKA PIC', 0x0A: 'BHU MCU', 0x0B: 'CIGS PIC'}
+    MIS_MCU_DEVICES = {0x06: 'APRS PIC', 0x07: 'CAM MCU', 0x08: 'CHO MCU', 
+                       0x09: 'SATO PIC', 0x0A: 'NAKA PIC', 0x0B: 'BHU MCU', 0x0C: 'CIGS PIC'}
 
     def __init__(self):
         self.ser = None
