@@ -85,13 +85,15 @@ class Command:
     FRAME_ID_PAYLOAD_LENGTH = {STATUS_CHECK: 0, IS_SMF_AVAILABLE: 1, MIS_MCU_STATUS: 1, UL_CMD: 8, ACK: 0}
     
     @staticmethod
-    def input_paylaod() -> bytes:
-        print(Print.timestamped(f'Enter uplink command in hex {Print.BOLD}(CMD ID, CMD Parameter only. {Print.RESET}SFD, Device ID, Frame ID, CRC automatically addition.)'))
-        print(Print.timestamped('  __ __ __ __ __ __ __ __ __'))
+    def input_payload() -> bytes:
+        print(f'Enter uplink command in hex {Print.BOLD}(CMD ID, CMD Parameter only. {Print.RESET}SFD, Device ID, Frame ID, CRC automatically addition.)')
+        print('  __ __ __ __ __ __ __ __ __')
         while True:
             input_str = input('> ').replace(' ', '').upper()
             if re.fullmatch('[0-9A-F]{18}', input_str):
-                return bytes.fromhex(input_str)@staticmethod
+                return bytes.fromhex(input_str)
+            
+    @staticmethod
     def calc_crc(data: bytes) -> bytes:
         crc = data[0]
         for dt in data[1:]:
@@ -164,14 +166,14 @@ class Communication:
         self.select_device_id()
 
     def select_port(self):
-        print(Print.timestamped('Select using port'))
+        print('Select using port')
         while True:
             ports = list(serial.tools.list_ports.comports())
             if not ports:
-                input(Print.timestamped('No port found. Press any key to retry.'))
+                input('No port found. Press any key to retry.')
                 continue
             for i, port in enumerate(ports):
-                print(Print.timestamped(f'{i:X}) {port.device}  '), end='\t')
+                print(f'{i:X}) {port.device}  ', end='\t')
             print()
             while True:
                 choice_str = input('> ')
@@ -180,21 +182,21 @@ class Communication:
                     try:
                         self.ser: serial.Serial = serial.Serial(ports[choice].device, baudrate=9600, timeout=1)
                     except serial.SerialException as e:
-                        print(Print.timestamped(str(e)))
+                        print(str(e))
                         continue
                     return
 
     def select_device_id(self):
         while True:
-            print(Print.timestamped('\nSelect your device:'))
+            print('\nSelect your device:')
             for id, name in self.MIS_MCU_DEVICES.items():
-                print(Print.timestamped(f'{id:X}) {name}'), end='\t')
+                print(f'{id:X}) {name}', end='\t')
             print()
 
             choice = input('> ').strip().upper()
             if re.fullmatch(f'^[6-9A-F]$', choice):
                 self.device_id = bytes.fromhex('0' + choice)
-                print(Print.timestamped(f'Using device: {self.MIS_MCU_DEVICES[int(choice, 16)]}'))
+                print(f'Using device: {self.MIS_MCU_DEVICES[int(choice, 16)]}')
                 return
 
     def transmit_and_receive_command(self, command: bytes) -> bytes | None:
@@ -278,15 +280,15 @@ def close_and_exit(com) -> None:
 
 
 def main():
-    print(Print.timestamped(f'\n================================'))
-    print(Print.timestamped(f'=== {Print.BOLD}BOSS PIC Simulator v1.00{Print.RESET} ==='))
-    print(Print.timestamped(f'================================\n'))
+    print(f'\n================================')
+    print(f'=== {Print.BOLD}BOSS PIC Simulator v1.00{Print.RESET} ===')
+    print(f'================================\n')
 
     com = Communication()
     com.setup()
 
-    print(Print.timestamped(f'\n{Print.LINE}\n'))
-    uplink_command_payload = Command.input_paylaod()
+    print(f'\n{Print.LINE}\n')
+    uplink_command_payload = Command.input_payload()
     uplink_command = Command.make_command(com.device_id, Command.UL_CMD, uplink_command_payload)
 
     print(Print.timestamped(f"{Print.INFO} BOSS PIC received uplink command"))
@@ -335,5 +337,4 @@ def main():
         response = com.transmit_and_receive_command(status_check_command)
 
 if __name__ == '__main__':
-    # main()
-    print(Print.timestamped(f'Enter uplink command in hex {Print.BOLD}(CMD ID, CMD Parameter only. {Print.RESET}SFD, Device ID, Frame ID, CRC automatically addition.)'))
+    main()
