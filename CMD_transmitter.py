@@ -4,6 +4,7 @@ import re
 import serial
 import serial.tools.list_ports
 import sys
+from datetime import datetime
 
 setting = {
     "retransmit_time": 0,       # Retransmit limit
@@ -26,14 +27,22 @@ class Print:
     LINE    = '=' * 30
 
     @staticmethod
+    def get_timestamp() -> str:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    @staticmethod
+    def timestamped(message: str) -> str:
+        return f"[{Print.get_timestamp()}] {message}"
+
+    @staticmethod
     def space_every_two_str(bytes: bytes) -> str:
         return " ".join(bytes.hex()[i:i+2].upper() for i in range(0, len(bytes.hex()), 2))
     
     def transmit(frame: bytes) -> None:
-        print(f'\n{Print.EVENT} PC > > > {Print.BOLD}[{Print.space_every_two_str(frame)}]{Print.RESET}\n')
+        print(Print.timestamped(f'\n{Print.EVENT} PC > > > {Print.BOLD}[{Print.space_every_two_str(frame)}]{Print.RESET}\n'))
 
     def receive(frame: bytes) -> None:
-        print(f'\n{Print.EVENT} PC < < < {Print.BOLD}[{Print.space_every_two_str(frame)}]{Print.RESET}\n')
+        print(Print.timestamped(f'\n{Print.EVENT} PC < < < {Print.BOLD}[{Print.space_every_two_str(frame)}]{Print.RESET}\n'))
 
 @dataclasses.dataclass
 class FrameData:
@@ -78,9 +87,7 @@ class Command:
 
     def __init__(self):
         self.device_id = None
-        # self.frame_id = Command.UL_CMD
-
-    def select_device(self):
+        # self.frame_id = Command.UL_CMD    def select_device(self):
         print('\nSelect your device:')
         for id, name in Command.Devices.items():
             print(f'{id:X}) {name}   ', end='\t')
@@ -95,7 +102,7 @@ class Command:
                 return
 
     def input_payload(self, com: serial.Serial) -> bytes:
-        print('  __ __ __ __ __ __ __ __ __')
+        print(Print.timestamped('  __ __ __ __ __ __ __ __ __ __'))
         while True:
             input_str = input('> ').replace(' ', '').upper()
             if re.fullmatch("^[0-9A-F]+$", input_str):
@@ -110,12 +117,11 @@ class Command:
         # return Command.SFD + header + payload + crc
         return (Command.SFD if Command.is_add_SFD else b'') + payload + (Command.calc_crc(payload) if Command.is_add_CRC else b'')
 
-            
     @staticmethod
     def check_SFD(frame: bytes) -> bytes | None:
         index = frame.find(Command.SFD)
         if index == -1:
-            print(f"{Print.ERROR}Don't find SFD(0xAA){Print.RESET}")
+            print(Print.timestamped(f"{Print.ERROR}Don't find SFD(0xAA){Print.RESET}"))
             return None
         else:
             return frame[index:]           
@@ -134,9 +140,9 @@ class Command:
         if received_crc == collect_crc:
             return True
         else:
-            print(f"{Print.ERROR} CRC error !")
-            print(f"\t-> received crc: {int.from_bytes(received_crc):02X}")
-            print(f"\t   collect crc : {int.from_bytes(collect_crc):02X}")
+            print(Print.timestamped(f"{Print.ERROR} CRC error !"))
+            print(Print.timestamped(f"\t-> received crc: {int.from_bytes(received_crc):02X}"))
+            print(Print.timestamped(f"\t   collect crc : {int.from_bytes(collect_crc):02X}"))
             return False
 
     @staticmethod
@@ -173,7 +179,7 @@ class Communication:
                     try:
                         self.ser: serial.Serial = serial.Serial(ports[choice].device, baudrate=9600, timeout=1)
                     except serial.SerialException as e:
-                        print(e)
+                        print(Print.timestamped(str(e)))
                         continue
                     return
     
@@ -196,7 +202,7 @@ class Communication:
 
 def close_and_exit(com) -> None:
     com.close()
-    print(f"Software exit.")
+    print(Print.timestamped(f"Software exit."))
     sys.exit()
 
 
@@ -227,7 +233,7 @@ def main():
             Print.receive(receive)
             cmd.analyze_frame(receive)
         else:
-            print(f"PC didn't receive any signal")
+            print(Print.timestamped(f"PC didn't receive any signal"))
 
 if __name__ == '__main__':
     main()
