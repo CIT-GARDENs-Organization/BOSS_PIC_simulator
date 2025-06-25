@@ -148,7 +148,7 @@ class Command:
         elif frame_id == Command.UL_CMD:
             return FrameData(Command.UL_CMD, data[2:-1])
         elif frame_id == Command.MIS_MCU_STATUS:
-            return FrameData(Command.MIS_MCU_STATUS, data[2:-1])
+            return FrameData(Command.MIS_MCU_STATUS, data[2].to_bytes())
         else:
             return FrameData(None, None)
     
@@ -202,7 +202,7 @@ class Communication:
     def transmit_and_receive_command(self, command: bytes) -> bytes | None:
         retransmission_time = setting["retransmit_time"]
         for _ in range(retransmission_time + 1):
-            print(Print.timestamped(f'\n{Print.EVENT} BOSS PIC transmit command'))
+            print(Print.timestamped(f'{Print.EVENT} BOSS PIC transmit command'))
             print(Print.timestamped(f'\t\t{Print.BOLD}BOSS > > > [{Print.space_every_two_str(command)}] > > > MIS MCU{Print.RESET}\n'))
             self.ser.write(command)
             if not setting["debug_mode"]:
@@ -214,7 +214,7 @@ class Communication:
             if len(response) > 2:
                 if Command.device_id_check(response):
                     if Command.check_crc(response[1:]):
-                        print(Print.timestamped(f'\n{Print.EVENT} BOSS PIC received command'))
+                        print(Print.timestamped(f'{Print.EVENT} BOSS PIC received command'))
                         print(Print.timestamped(f'\t\t{Print.BOLD}BOSS < < < [{Print.space_every_two_str(response)}] < < < MIS MCU\n'))
                         return response
         return None
