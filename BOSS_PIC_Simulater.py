@@ -66,8 +66,8 @@ class Command:
     IS_SMF_AVAILABLE = b'\x02'
 
     # IS_SMF_AVAILABLE payload
-    ALLOW = b'\x00'
-    DENY = b'\x01'
+    ALLOW = b'\x01'
+    DENY = b'\x00'
 
     # flame id (boss pic receive)
     MIS_MCU_STATUS = b'\x03'
