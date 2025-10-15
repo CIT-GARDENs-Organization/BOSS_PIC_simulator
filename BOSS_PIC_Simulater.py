@@ -53,6 +53,8 @@ class FrameData:
     payload: bytes | None
 
 
+is_selected_cigs: bool = False
+
 # command making, check etc...
 class Command:
     # most foundamental define
@@ -64,6 +66,7 @@ class Command:
     # flame id (mis mcu receive)
     STATUS_CHECK = b'\x01'
     IS_SMF_AVAILABLE = b'\x02'
+    SEND_TIME = b'\x03'
 
     # IS_SMF_AVAILABLE payload
     ALLOW = b'\x01'
@@ -82,7 +85,7 @@ class Command:
     UL_CMD = b'\x00'
     ACK = b'\x0F'
 
-    FRAME_ID_PAYLOAD_LENGTH = {STATUS_CHECK: 0, IS_SMF_AVAILABLE: 1, MIS_MCU_STATUS: 1, UL_CMD: 8, ACK: 0}
+    FRAME_ID_PAYLOAD_LENGTH = {STATUS_CHECK: 0, IS_SMF_AVAILABLE: 1, MIS_MCU_STATUS: 1, UL_CMD: 8, ACK: 0, SEND_TIME: 4}
     
     @staticmethod
     def input_payload() -> bytes:
@@ -197,6 +200,9 @@ class Communication:
             if re.fullmatch(f'^[6-9A-F]$', choice):
                 self.device_id = bytes.fromhex('0' + choice)
                 print(f'Using device: {self.MIS_MCU_DEVICES[int(choice, 16)]}')
+                if self.device_id == b'\x0C':
+                    global is_selected_cigs
+                    is_selected_cigs = True
                 return
 
     def transmit_and_receive_command(self, command: bytes) -> bytes | None:
@@ -293,6 +299,26 @@ def main():
 
     print(Print.timestamped(f"{Print.INFO} BOSS PIC received uplink command"))
     time.sleep(1)
+
+    if is_selected_cigs:
+        print("Transmit Current time to CIGS PIC")
+        # Build packet: 0xAAC3 followed by elapsed seconds from Jan 1 00:00:00 of current year
+        def build_cigs_time_packet() -> bytes:
+            now = datetime.now()
+            now = datetime(year=now.year, month=1, day=1, hour=0, minute=0, second=30)
+            year_start = datetime(year=now.year, month=1, day=1, hour=0, minute=0, second=0)
+            elapsed = int((now - year_start).total_seconds())
+            # uint32 little-endian
+            return elapsed.to_bytes(4, 'little', signed=False)
+
+        data: bytes = build_cigs_time_packet()
+        print(Print.timestamped(f"CIGS time packet: {Print.space_every_two_str(data)}"))
+        # If you need to wrap it into a command frame (SFD, header, CRC), use make_command
+        # Here we assume sending as payload of UL_CMD to CIGS PIC device
+        cigs_command = Command.make_command(com.device_id, Command.SEND_TIME, data)
+        # send
+        response = com.transmit_and_receive_command(cigs_command)
+        time.sleep(2)
 
     response = com.transmit_and_receive_command(uplink_command)
     
